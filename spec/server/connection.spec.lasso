@@ -31,4 +31,21 @@ describe(::couchDB_server) => {
 
         expect('http', #server->protocol)
     }
+
+
+    local(live) = couchDB_server('127.0.0.1', -noSSL)
+    describe(`-> info`) => {
+        it(`creates a request with a header that specifies it expects a json response`) => {
+            protect => { #live->info }
+
+            expect(#live->currentRequest->headers >> pair(`Accept` = "application/json"))
+        }
+
+        it(`returns an object with some expected keys / values`) => {
+            local(result) = #live->info
+
+            expect("Welcome", #result->find(`couchdb`))
+            expect->valueIsA(#result->find(`version`), ::string)
+        }
+    }
 }
