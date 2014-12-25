@@ -45,6 +45,21 @@ define couchDB_server => type {
         return json_decode(.currentResponse->bodyString)
     }
 
+    public dbUpdates(feed::string, -timeout::integer=60, -noHeartbeat::boolean=false) => {
+        (:'longpoll', 'continuous', 'eventsource') !>> #feed
+            ? fail(error_code_invalidParameter, "Invalid parameter passed to feed")
+
+
+        .generateRequest(
+            '/_db_updates',
+            -headers   = (:`Accept` = "application/json"),
+            -getParams = (:`feed` = #feed, `timeout` = #timeout, `heartbeat` = not #noHeartbeat)
+
+        )
+
+        return json_decode(.currentResponse->bodyString)
+    }
+
 
 
     // Introspection Accessors

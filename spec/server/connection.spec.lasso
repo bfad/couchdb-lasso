@@ -33,45 +33,98 @@ describe(::couchDB_server) => {
     }
 
 
-    local(live) = couchDB_server('127.0.0.1', -noSSL)
+    local(server) = couchDB_server('bad_domain')
     describe(`-> info`) => {
         it(`creates a request with a header that specifies it expects a json response`) => {
-            protect => { #live->info }
+            protect => { #server->info }
 
-            expect(#live->currentRequest->headers >> pair(`Accept` = "application/json"))
-        }
-
-        it(`returns an object with some expected keys / values`) => {
-            local(result) = #live->info
-
-            expect("Welcome", #result->find(`couchdb`))
-            expect->valueIsA(#result->find(`version`), ::string)
+            expect(#server->currentRequest->headers >> pair(`Accept` = "application/json"))
         }
     }
 
     describe(`-> activeTasks`) => {
         beforeAll => {
-            protect => { #live->activeTasks }
+            protect => { #server->activeTasks }
         }
         it(`creates a request with the proper path`) => {
-            expect(#live->currentRequest->headers >> pair(`Accept` = "application/json"))
+            expect(#server->currentRequest->headers >> pair(`Accept` = "application/json"))
         }
 
         it(`creates a request with a header that specifies it expects a json response`) => {
-            expect("/_active_tasks", #live->currentRequest->urlPath)
+            expect("/_active_tasks", #server->currentRequest->urlPath)
         }
     }
 
     describe(`-> allDBs`) => {
         beforeAll => {
-            protect => { #live->allDBs }
+            protect => { #server->allDBs }
         }
         it(`creates a request with the proper path`) => {
-            expect("/_all_dbs", #live->currentRequest->urlPath)
+            expect("/_all_dbs", #server->currentRequest->urlPath)
         }
 
         it(`creates a request with a header that specifies it expects a json response`) => {
-            expect(#live->currentRequest->headers >> pair(`Accept` = "application/json"))
+            expect(#server->currentRequest->headers >> pair(`Accept` = "application/json"))
+        }
+    }
+
+    describe(`-> dbUpdates`) => {
+        it(`fails if not passed a proper feed parameter`) => {
+            expect->errorCode(error_code_invalidParameter) => {
+                #server->dbUpdates('_BAD_')
+            }
+
+            local(failure)  = false
+            local(statuses) = (:'longpoll', 'continuous', 'eventsource')
+            with status in #statuses do {
+                protect => {
+                    handle_error => {
+                        #failure = error_code == error_code_invalidParameter
+                    }
+                    #server->dbUpdates(#status)
+                }
+                expect(not #failure)
+            }
+        }
+
+        it(`creates a request with the proper path and Accept header`) => {
+            protect => { #server->dbUpdates('longpoll') }
+
+            expect("/_db_updates", #server->currentRequest->urlPath)
+            expect(#server->currentRequest->headers >> pair(`Accept` = "application/json"))
+        }
+
+        it(`creates a request with the specified feed parameter and proper defaults`) => {
+            protect => { #server->dbUpdates('continuous') }
+
+            expect(#server->currentRequest->getParams >> pair("feed", "continuous"))
+
+            expect(#server->currentRequest->getParams >> pair("timeout", 60))
+            expect(#server->currentRequest->getParams >> pair("heartbeat", true))
+        }
+
+        it(`creates a request with the specified timeout parameter`) => {
+            protect => { #server->dbUpdates('longpoll', -timeout=5) }
+
+            expect(#server->currentRequest->getParams >> pair("timeout", 5))
+        }
+
+        it(`creates a request with the specified heartbeat parameter`) => {
+            protect => { #server->dbUpdates('longpoll', -noHeartbeat) }
+
+            expect(#server->currentRequest->getParams >> pair("heartbeat", false))
+
         }
     }
 }
+
+
+/*
+local(live) = couchDB_server('127.0.0.1', -noSSL)
+it(`returns an object with some expected keys / values`) => {
+    local(result) = #live->info
+
+    expect("Welcome", #result->find(`couchdb`))
+    expect->valueIsA(#result->find(`version`), ::string)
+}
+*/
