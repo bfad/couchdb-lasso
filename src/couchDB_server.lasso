@@ -18,12 +18,21 @@ define couchDB_server => type {
 
 
     public info => {
-        .currentRequest = http_request(
-            .protocol + '://' + .host + ':' + .port + '/',
+        .generateRequest(
+            '/',
             -headers = (:`Accept` = "application/json")
         )
-        .currentResponse = .currentRequest->response
 
+        return json_decode(.currentResponse->bodyString)
+    }
+
+// TODO: Custom Type
+    public activeTasks => {
+        .generateRequest(
+            '/_active_tasks',
+            -headers = (:`Accept` = "application/json")
+        )
+        
         return json_decode(.currentResponse->bodyString)
     }
 
@@ -32,5 +41,12 @@ define couchDB_server => type {
     // Introspection Accessors
     public
         currentRequest  => .`currentRequest`,
-        currentResponse => .`currentResponse`
+        currentResponse => .`currentResponse` || .`currentResponse` := .currentRequest->response
+
+
+
+    private generateRequest(path::string, ...) => {
+        .currentRequest  = http_request(:(:.protocol + '://' + .host + ':' + .port + #path) + (#rest || (:)))
+        .currentResponse = null
+    }
 }

@@ -48,4 +48,19 @@ describe(::couchDB_server) => {
             expect->valueIsA(#result->find(`version`), ::string)
         }
     }
+
+    describe(`-> activeTasks`) => {
+        beforeAll => {
+            protect => { #live->activeTasks }
+        }
+        it(`creates a request with the proper path`) => {
+            expect(#live->currentRequest->headers >> pair(`Accept` = "application/json"))
+        }
+
+        it(`creates a request with a header that specifies it expects a json response`) => {
+            expect("/_active_tasks", #live->currentRequest->urlPath)
+        }
+    }
+
+    //describe(`-> `)
 }
