@@ -62,5 +62,16 @@ describe(::couchDB_server) => {
         }
     }
 
-    //describe(`-> `)
+    describe(`-> allDBs`) => {
+        beforeAll => {
+            protect => { #live->allDBs }
+        }
+        it(`creates a request with the proper path`) => {
+            expect("/_all_dbs", #live->currentRequest->urlPath)
+        }
+
+        it(`creates a request with a header that specifies it expects a json response`) => {
+            expect(#live->currentRequest->headers >> pair(`Accept` = "application/json"))
+        }
+    }
 }

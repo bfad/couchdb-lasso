@@ -36,6 +36,15 @@ define couchDB_server => type {
         return json_decode(.currentResponse->bodyString)
     }
 
+    public allDBs => {
+        .generateRequest(
+            '/_all_dbs',
+            -headers = (:`Accept` = "application/json")
+        )
+
+        return json_decode(.currentResponse->bodyString)
+    }
+
 
 
     // Introspection Accessors
