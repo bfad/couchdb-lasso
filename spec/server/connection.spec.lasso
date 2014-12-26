@@ -216,6 +216,23 @@ describe(::couchDB_server) => {
             expect(#proxy, json_decode(decode_url(#server->currentRequest->postParams)->asString)->find(`proxy`))
         }
     }
+
+
+    describe(`-> restart`) => {
+        it(`creates a request with the proper path and method`) => {
+            protect => { #server->restart }
+
+            expect("/_restart", #server->currentRequest->urlPath)
+            expect("POST"       , #server->currentRequest->method)
+        }
+
+        it(`creates a request with the proper Accept and Content-Type headers`) => {
+            protect => { #server->restart }
+
+            expect(#server->currentRequest->headers >> pair(`Accept`       = "application/json"))
+            expect(#server->currentRequest->headers >> pair(`Content-Type` = "application/json"))
+        }
+    }
 }
 
 

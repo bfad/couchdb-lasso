@@ -102,6 +102,16 @@ define couchDB_server => type {
         )
     }
 
+    public restart => {
+        .generateRequest(
+            '/_restart',
+            -method  = "POST",
+            -headers = (:`Accept` = "application/json", `Content-Type` = "application/json")
+        )
+
+        return currentResponse->statusCode == 202
+    }
+
 
 
     // Introspection Accessors
