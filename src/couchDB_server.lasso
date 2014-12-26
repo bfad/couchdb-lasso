@@ -26,7 +26,7 @@ define couchDB_server => type {
         return json_decode(.currentResponse->bodyString)
     }
 
-// TODO: Custom Type
+    // TODO: Custom Type Result
     public activeTasks => {
         .generateRequest(
             '/_active_tasks',
@@ -68,6 +68,38 @@ define couchDB_server => type {
         )
 
         return json_decode(.currentResponse->bodyString)
+    }
+
+    // TODO: Custom Type Result
+    public replicate(
+        source::string,
+        target::string,
+        -createTarget::boolean = false,
+        -continuous::boolean   = false,
+        -cancel::boolean       = false,
+        -docIDs::trait_forEach = (:),
+        -proxy::string         = ''
+    ) => {
+        local(params) = map(`source` = #source, `target` = #target)
+
+        #createTarget? #params->insert(`create_target` = true)
+        #continuous  ? #params->insert(`continuous`    = true)
+        #cancel      ? #params->insert(`cancel`        = true)
+        #proxy != '' ? #params->insert(`proxy`         = #proxy)
+
+        if(#docIDs->isNotEmpty) => {
+            #docIDs->isNotA(::array) and #docIDs->isNotA(::staticarray)
+                ? #docIDs = (with elm in #docIDs select #elm)->asStaticArray
+
+            #params->insert(`doc_ids` = #docIDs)
+        }
+
+        .generateRequest(
+            '/_replicate',
+            -method     = `POST`,
+            -headers    = (:`Accept` = "application/json", `Content-Type` = "application/json"),
+            -postParams = json_encode(#params)
+        )
     }
 
 

@@ -145,6 +145,77 @@ describe(::couchDB_server) => {
 
         }
     }
+
+    describe(`-> replicate`) => {
+        it(`creates a request with the proper path, method, Accept header, and Content-Type header`) => {
+            protect => { #server->replicate('source', 'destination') }
+
+            expect("/_replicate", #server->currentRequest->urlPath)
+            expect("POST"       , #server->currentRequest->method)
+            expect(#server->currentRequest->headers >> pair(`Accept`       = "application/json"))
+            expect(#server->currentRequest->headers >> pair(`Content-Type` = "application/json"))
+        }
+
+        it(`properly creates a JSON object with the source and destination specified in the post body`) => {
+            protect => { #server->replicate('source', 'target') }
+
+            local(body) = json_decode(#server->currentRequest->postParams)
+            expect('source', #body->find(`source`))
+            expect('target', #body->find(`target`))
+        }
+
+        it(`it adds the create_target option only when it's true`) => {
+            protect => { #server->replicate('source', 'destination') }
+
+            expect(void, json_decode(decode_url(#server->currentRequest->postParams)->asString)->find(`create_target`))
+
+            protect => { #server->replicate('source', 'destination', -createTarget) }
+
+            expect(true, json_decode(decode_url(#server->currentRequest->postParams)->asString)->find(`create_target`))
+        }
+
+        it(`it adds the continuous option only when it's true`) => {
+            protect => { #server->replicate('source', 'destination') }
+
+            expect(void, json_decode(decode_url(#server->currentRequest->postParams)->asString)->find(`continuous`))
+
+            protect => { #server->replicate('source', 'destination', -continuous) }
+
+            expect(true, json_decode(decode_url(#server->currentRequest->postParams)->asString)->find(`continuous`))
+        }
+
+        it(`it adds the cancel option only when it's true`) => {
+            protect => { #server->replicate('source', 'destination') }
+
+            expect(void, json_decode(decode_url(#server->currentRequest->postParams)->asString)->find(`cancel`))
+
+            protect => { #server->replicate('source', 'destination', -cancel) }
+
+            expect(true, json_decode(decode_url(#server->currentRequest->postParams)->asString)->find(`cancel`))
+        }
+
+        it(`it adds the doc_ids option only when it's true`) => {
+            protect => { #server->replicate('source', 'destination') }
+
+            expect(void, json_decode(decode_url(#server->currentRequest->postParams)->asString)->find(`doc_ids`))
+
+            local(ids) = array(lasso_uniqueID)
+            protect => { #server->replicate('source', 'destination', -docIDs=#ids) }
+
+            expect(#ids, json_decode(decode_url(#server->currentRequest->postParams)->asString)->find(`doc_ids`))
+        }
+
+        it(`it adds the proxy option only when it's true`) => {
+            protect => { #server->replicate('source', 'destination') }
+
+            expect(void, json_decode(decode_url(#server->currentRequest->postParams)->asString)->find(`proxy`))
+
+            local(proxy) = "socks5://example.com"
+            protect => { #server->replicate('source', 'destination', -proxy=#proxy) }
+
+            expect(#proxy, json_decode(decode_url(#server->currentRequest->postParams)->asString)->find(`proxy`))
+        }
+    }
 }
 
 
