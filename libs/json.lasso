@@ -216,17 +216,10 @@ define json_encode => type {
     data private s
     data private pretty // vs. compact
     
-    public onCreate(a::trait_finiteForEach, pretty = false) => {
+    public onCreate(value, pretty = false) => {
         .s = ''
         .pretty = #pretty
-        .encodeValue(#a)
-        return .s
-    }
-    
-    public onCreate(m::trait_keyedForEach, pretty = false) => {
-        .s = ''
-        .pretty = #pretty
-        .encodeValue(#m)
+        .encodeValue(#value)
         return .s
     }
     
@@ -257,7 +250,7 @@ define json_encode => type {
         .s->append(']')
     }
     
-    protected encodeValue(a::trait_keyedForEach) => {
+    protected encodeValue(a::map) => {
         .s->append('{')
         local(c = 0)
         
