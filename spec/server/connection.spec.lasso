@@ -233,6 +233,28 @@ describe(::couchDB_server) => {
             expect(#server->currentRequest->headers >> pair(`Content-Type` = "application/json"))
         }
     }
+
+
+    describe(`-> stats`) => {
+        it(`creates a request with the proper path`) => {
+            protect => { #server->stats }
+
+            expect("/_stats", #server->currentRequest->urlPath)
+        }
+
+        it(`creates a request with the proper Accept and Content-Type headers`) => {
+            protect => { #server->stats }
+
+            expect(#server->currentRequest->headers >> pair(`Accept` = "application/json"))
+        }
+
+        it(`creates a request with the proper path when an individual statistic is requested`) => {
+            protect => { #server->stats('couchdb', 'request_time') }
+
+            expect("/_stats/couchdb/request_time", #server->currentRequest->urlPath)
+            expect(#server->currentRequest->headers >> pair(`Accept` = "application/json"))
+        }
+    }
 }
 
 

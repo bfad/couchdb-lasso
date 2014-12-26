@@ -114,6 +114,23 @@ define couchDB_server => type {
         return currentResponse->statusCode == 202
     }
 
+    // TODO: Custom Type Result (or sub results...)
+    public stats => {
+        .generateRequest(
+            '/_stats',
+            -headers = (:`Accept` = "application/json")
+        )
+        return json_decode(.currentResponse->bodyString)
+    }
+    // TODO: Custom Type Result (stick section and name into parameters as well as the sub keys?)
+    public stats(section::string, statistic::string) => {
+        .generateRequest(
+            '/_stats/' + #section + '/' + #statistic,
+            -headers = (:`Accept` = "application/json")
+        )
+        return json_decode(.currentResponse->bodyString)
+    }
+
 
 
     // Introspection Accessors
