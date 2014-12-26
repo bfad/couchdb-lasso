@@ -255,6 +255,36 @@ describe(::couchDB_server) => {
             expect(#server->currentRequest->headers >> pair(`Accept` = "application/json"))
         }
     }
+
+
+    describe(`-> uuid`) => {
+        it(`creates a request with the proper path and Accept header`) => {
+            protect => { #server->uuid }
+
+            expect("/_uuids", #server->currentRequest->urlPath)
+            expect(#server->currentRequest->headers >> pair(`Accept` = "application/json"))
+        }
+    }
+    describe(`-> uuids`) => {
+        it(`creates a request with the proper path and Accept header`) => {
+            protect => { #server->uuids(10) }
+
+            expect("/_uuids", #server->currentRequest->urlPath)
+            expect(#server->currentRequest->headers >> pair(`Accept` = "application/json"))
+        }
+
+        it(`creates a request with the specified count parameter`) => {
+            protect => { #server->uuids(42) }
+
+            expect(#server->currentRequest->getParams >> pair("count", 42))
+        }
+
+        it(`creates a request with the count specified as 1 if passed a number < 1`) => {
+            protect => { #server->uuids(0) }
+
+            expect(#server->currentRequest->getParams >> pair("count", 1))
+        }
+    }
 }
 
 

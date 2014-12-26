@@ -131,6 +131,24 @@ define couchDB_server => type {
         return json_decode(.currentResponse->bodyString)
     }
 
+    public uuid => {
+        .generateRequest(
+            '/_uuids',
+            -headers = (:`Accept` = "application/json")
+        )
+        return json_decode(.currentResponse->bodyString)->find(`uuids`)->first
+    }
+    public uuids(count::integer) => {
+        #count < 1 ? #count = 1
+
+        .generateRequest(
+            '/_uuids',
+            -headers = (:`Accept` = "application/json"),
+            -getParams = (:`count` = #count)
+        )
+        return json_decode(.currentResponse->bodyString)->find(`uuids`)
+    }
+
 
 
     // Introspection Accessors
