@@ -223,7 +223,7 @@ describe(::couchDB_server) => {
             protect => { #server->restart }
 
             expect("/_restart", #server->currentRequest->urlPath)
-            expect("POST"       , #server->currentRequest->method)
+            expect("POST"     , #server->currentRequest->method)
         }
 
         it(`creates a request with the proper Accept and Content-Type headers`) => {

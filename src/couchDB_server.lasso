@@ -100,6 +100,8 @@ define couchDB_server => type {
             -headers    = (:`Accept` = "application/json", `Content-Type` = "application/json"),
             -postParams = json_encode(#params)
         )
+
+        return json_decode(.currentResponse->bodyString)
     }
 
     public restart => {
