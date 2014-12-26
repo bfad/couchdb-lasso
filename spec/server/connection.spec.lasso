@@ -116,6 +116,35 @@ describe(::couchDB_server) => {
 
         }
     }
+
+    describe(`-> log`) => {
+        it(`creates a request with the proper path and Accept header`) => {
+            protect => { #server->log }
+
+            expect("/_log", #server->currentRequest->urlPath)
+            expect(#server->currentRequest->headers >> pair(`Accept` = "text/plain; charset=utf-8"))
+        }
+
+        it(`creates a request with the proper defaults`) => {
+            protect => { #server->log }
+
+            expect(#server->currentRequest->getParams >> pair("bytes", 1000))
+            expect(#server->currentRequest->getParams >> pair("offset", 0))
+        }
+
+        it(`creates a request with the specified timeout parameter`) => {
+            protect => { #server->log(-bytes=5) }
+
+            expect(#server->currentRequest->getParams >> pair("bytes", 5))
+        }
+
+        it(`creates a request with the specified heartbeat parameter`) => {
+            protect => { #server->log(-offset=2000) }
+
+            expect(#server->currentRequest->getParams >> pair("offset", 2000))
+
+        }
+    }
 }
 
 

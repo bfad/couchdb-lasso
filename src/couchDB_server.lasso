@@ -60,6 +60,16 @@ define couchDB_server => type {
         return json_decode(.currentResponse->bodyString)
     }
 
+    public log(-offset::integer=0, -bytes::integer=1000) => {
+        .generateRequest(
+            '/_log',
+            -headers   = (:`Accept` = "text/plain; charset=utf-8"),
+            -getParams = (:`offset` = #offset, `bytes` = #bytes)
+        )
+
+        return json_decode(.currentResponse->bodyString)
+    }
+
 
 
     // Introspection Accessors
