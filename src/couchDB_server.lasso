@@ -5,24 +5,32 @@ define couchDB_server => type {
         public port::integer,
         public username::string,
         public password::string,
+        public authCookie,
 
         private currentRequest,
-        private currentResponse
+        private currentResponse,
+        private authType::string
 
 
     public onCreate(
         connection::string,
         -noSSL::boolean=false,
         -username::string='',
-        -password::string=''
+        -password::string='',
+        -basicAuth::boolean=false
     ) => {
         local(host, port) = #connection->split(':')
 
-        .host     = #host
-        .port     = (#port  ? integer(#port) | 5984   )
-        .protocol = (#noSSL ? 'http'         | 'https')
-        .username = #username
-        .password = #password
+        .host       = #host
+        .port       = (#port  ? integer(#port) | 5984   )
+        .protocol   = (#noSSL ? 'http'         | 'https')
+        .username   = #username
+        .password   = #password
+        .authCookie = null
+
+        #username == ''
+            ? .authType = 'none'
+            | .authType = (#basicAuth ? 'basic' | 'cookie')
     }
 
 
