@@ -196,7 +196,7 @@ define json_decode => type {
                     else(#char == json_n_lower)
                         #s->sub(#start, 4) != 'null'?
                             fail(-1, 'Invalid character at location ' + #start + ' ' + #stack)
-                        #start += 4 
+                        #start += 3
                         .handlePop(null)
                         
                     else
