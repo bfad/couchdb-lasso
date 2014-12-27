@@ -3,17 +3,26 @@ define couchDB_server => type {
         public protocol::string,
         public host::string,
         public port::integer,
+        public username::string,
+        public password::string,
 
         private currentRequest,
         private currentResponse
 
 
-    public onCreate(connection::string, -noSSL::boolean=false) => {
+    public onCreate(
+        connection::string,
+        -noSSL::boolean=false,
+        -username::string='',
+        -password::string=''
+    ) => {
         local(host, port) = #connection->split(':')
 
         .host     = #host
         .port     = (#port  ? integer(#port) | 5984   )
         .protocol = (#noSSL ? 'http'         | 'https')
+        .username = #username
+        .password = #password
     }
 
 
@@ -112,6 +121,44 @@ define couchDB_server => type {
         )
 
         return currentResponse->statusCode == 202
+    }
+
+    // TODO: CUSTOM Type Result (and or sub results)
+    public session(-basic::boolean=false) => {
+        .generateRequest(
+            `/_session`,
+            -headers   = (:`Accept` = "application/json"),
+            -getParams = (#basic ? (:`basic` = true) | (:))
+        )
+        return json_decode(.currentResponse->bodyString)
+    }
+    // TODO: CUSTOM Type Result (and or sub results)
+    public sessionNew(-redirectPath::string='') => {
+        .generateRequest(
+            `/_session`,
+            -method     = 'POST',
+            -headers    = (:`Accept` = "application/json", `Content-Type` = "application/json"),
+            -getParams  = (#redirectPath->isNotEmpty? (:`next` = #redirectPath) | (:)),
+            -postParams = json_encode(map(`name` = .username, `password` = .password))
+        )
+
+        return json_decode(.currentResponse->bodyString)
+    }
+    public sessionNew(username::string, password::string, -redirectPath::string = '') => {
+        .username = #username
+        .password = #password
+
+        return .sessionNew(-redirectPath=#redirectPath)
+    }
+    
+    public sessionDelete => {
+        .generateRequest(
+            `/_session`,
+            -method  = "DELETE",
+            -headers = (:`Accept` = "application/json")
+        )
+
+        return currentResponse->statusCode == 200
     }
 
     // TODO: Custom Type Result (or sub results...)
