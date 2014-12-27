@@ -362,14 +362,3 @@ describe(::couchDB_server) => {
         }
     }
 }
-
-
-/*
-local(live) = couchDB_server('127.0.0.1', -noSSL)
-it(`returns an object with some expected keys / values`) => {
-    local(result) = #live->info
-
-    expect("Welcome", #result->find(`couchdb`))
-    expect->valueIsA(#result->find(`version`), ::string)
-}
-*/
