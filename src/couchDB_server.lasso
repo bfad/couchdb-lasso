@@ -33,7 +33,7 @@ define couchDB_server => type {
             -headers = (:`Accept` = "application/json")
         )
         
-        return json_decode(.currentResponse->bodyString)
+        return object_map_array(json_decode(.currentResponse->bodyString), ::couchResponse_task)
     }
 
     public allDBs => {
@@ -67,10 +67,9 @@ define couchDB_server => type {
             -getParams = (:`offset` = #offset, `bytes` = #bytes)
         )
 
-        return json_decode(.currentResponse->bodyString)
+        return .currentResponse->bodyString
     }
 
-    // TODO: Custom Type Result
     public replicate(
         source::string,
         target::string,
@@ -101,7 +100,7 @@ define couchDB_server => type {
             -postParams = json_encode(#params)
         )
 
-        return json_decode(.currentResponse->bodyString)
+        return couchResponse_replication(json_decode(.currentResponse->bodyString))
     }
 
     public restart => {
@@ -111,24 +110,26 @@ define couchDB_server => type {
             -headers = (:`Accept` = "application/json", `Content-Type` = "application/json")
         )
 
-        return currentResponse->statusCode == 202
+        return .currentResponse->statusCode == 202
     }
 
-    // TODO: Custom Type Result (or sub results...)
     public stats => {
         .generateRequest(
             '/_stats',
             -headers = (:`Accept` = "application/json")
         )
-        return json_decode(.currentResponse->bodyString)
+        return couchResponse_allStats(json_decode(.currentResponse->bodyString))
     }
-    // TODO: Custom Type Result (stick section and name into parameters as well as the sub keys?)
+
     public stats(section::string, statistic::string) => {
         .generateRequest(
             '/_stats/' + #section + '/' + #statistic,
             -headers = (:`Accept` = "application/json")
         )
-        return json_decode(.currentResponse->bodyString)
+        local(result) = json_decode(.currentResponse->bodyString)->find(#section)
+        #result->insert(`sectionName` = #section, `name` = #statistic)
+
+        return couchResponse_stat(#result)
     }
 
     public uuid => {
@@ -153,13 +154,20 @@ define couchDB_server => type {
 
     // Introspection Accessors
     public
+        baseURL         => .protocol + '://' + .host + ':' + .port,
         currentRequest  => .`currentRequest`,
-        currentResponse => .`currentResponse` || .`currentResponse` := .currentRequest->response
+        currentResponse => .`currentResponse` || .makeRequest&currentResponse
 
 
 
     private generateRequest(path::string, ...) => {
-        .currentRequest  = http_request(:(:.protocol + '://' + .host + ':' + .port + #path) + (#rest || (:)))
+        .currentRequest  = http_request(:(:.baseURL + #path) + (#rest || (:)))
         .currentResponse = null
+    }
+
+    private makeRequest => {
+        .currentResponse = .currentRequest->response
+
+        fail_if(.currentResponse->statusCode > 299, .currentResponse->statusCode, .currentResponse->statusMsg)
     }
 }
