@@ -3,17 +3,34 @@ define couchDB_server => type {
         public protocol::string,
         public host::string,
         public port::integer,
+        public username::string,
+        public password::string,
+        public authCookie,
 
         private currentRequest,
-        private currentResponse
+        private currentResponse,
+        private authType::string
 
 
-    public onCreate(connection::string, -noSSL::boolean=false) => {
+    public onCreate(
+        connection::string,
+        -noSSL::boolean=false,
+        -username::string='',
+        -password::string='',
+        -basicAuth::boolean=false
+    ) => {
         local(host, port) = #connection->split(':')
 
-        .host     = #host
-        .port     = (#port  ? integer(#port) | 5984   )
-        .protocol = (#noSSL ? 'http'         | 'https')
+        .host       = #host
+        .port       = (#port  ? integer(#port) | 5984   )
+        .protocol   = (#noSSL ? 'http'         | 'https')
+        .username   = #username
+        .password   = #password
+        .authCookie = null
+
+        #username == ''
+            ? .authType = 'none'
+            | .authType = (#basicAuth ? 'basic' | 'cookie')
     }
 
 
@@ -33,7 +50,7 @@ define couchDB_server => type {
             -headers = (:`Accept` = "application/json")
         )
         
-        return json_decode(.currentResponse->bodyString)
+        return object_map_array(json_decode(.currentResponse->bodyString), ::couchResponse_task)
     }
 
     public allDBs => {
@@ -67,10 +84,9 @@ define couchDB_server => type {
             -getParams = (:`offset` = #offset, `bytes` = #bytes)
         )
 
-        return json_decode(.currentResponse->bodyString)
+        return .currentResponse->bodyString
     }
 
-    // TODO: Custom Type Result
     public replicate(
         source::string,
         target::string,
@@ -101,7 +117,7 @@ define couchDB_server => type {
             -postParams = json_encode(#params)
         )
 
-        return json_decode(.currentResponse->bodyString)
+        return couchResponse_replication(json_decode(.currentResponse->bodyString))
     }
 
     public restart => {
@@ -111,24 +127,64 @@ define couchDB_server => type {
             -headers = (:`Accept` = "application/json", `Content-Type` = "application/json")
         )
 
-        return currentResponse->statusCode == 202
+        return .currentResponse->statusCode == 202
     }
 
-    // TODO: Custom Type Result (or sub results...)
+    // TODO: CUSTOM Type Result (and or sub results)
+    public session(-basic::boolean=false) => {
+        .generateRequest(
+            `/_session`,
+            -headers   = (:`Accept` = "application/json"),
+            -getParams = (#basic ? (:`basic` = true) | (:))
+        )
+        return json_decode(.currentResponse->bodyString)
+    }
+    // TODO: CUSTOM Type Result (and or sub results)
+    public sessionNew(-redirectPath::string='') => {
+        .generateRequest(
+            `/_session`,
+            -method     = 'POST',
+            -headers    = (:`Accept` = "application/json", `Content-Type` = "application/json"),
+            -getParams  = (#redirectPath->isNotEmpty? (:`next` = #redirectPath) | (:)),
+            -postParams = json_encode(map(`name` = .username, `password` = .password))
+        )
+
+        return json_decode(.currentResponse->bodyString)
+    }
+    public sessionNew(username::string, password::string, -redirectPath::string = '') => {
+        .username = #username
+        .password = #password
+
+        return .sessionNew(-redirectPath=#redirectPath)
+    }
+    
+    public sessionDelete => {
+        .generateRequest(
+            `/_session`,
+            -method  = "DELETE",
+            -headers = (:`Accept` = "application/json")
+        )
+
+        return currentResponse->statusCode == 200
+    }
+
     public stats => {
         .generateRequest(
             '/_stats',
             -headers = (:`Accept` = "application/json")
         )
-        return json_decode(.currentResponse->bodyString)
+        return couchResponse_allStats(json_decode(.currentResponse->bodyString))
     }
-    // TODO: Custom Type Result (stick section and name into parameters as well as the sub keys?)
+
     public stats(section::string, statistic::string) => {
         .generateRequest(
             '/_stats/' + #section + '/' + #statistic,
             -headers = (:`Accept` = "application/json")
         )
-        return json_decode(.currentResponse->bodyString)
+        local(result) = json_decode(.currentResponse->bodyString)->find(#section)
+        #result->insert(`sectionName` = #section, `name` = #statistic)
+
+        return couchResponse_stat(#result)
     }
 
     public uuid => {
@@ -153,13 +209,55 @@ define couchDB_server => type {
 
     // Introspection Accessors
     public
+        baseURL         => .protocol + '://' + .host + ':' + .port,
         currentRequest  => .`currentRequest`,
-        currentResponse => .`currentResponse` || .`currentResponse` := .currentRequest->response
+        currentResponse => .`currentResponse` || .makeRequest&currentResponse
 
 
 
     private generateRequest(path::string, ...) => {
-        .currentRequest  = http_request(:(:.protocol + '://' + .host + ':' + .port + #path) + (#rest || (:)))
         .currentResponse = null
+        .currentRequest  = http_request(:(:.baseURL + #path) + (#rest || (:)))
+
+        // If posting to /_session, trying to get a new Authentication token, so don't setup auth
+        #path == "/_session" and .currentRequest->method == "POST"
+            ? null
+            | .setupAuthentication
+    }
+    private setupAuthentication => {
+        match(.authType) => {
+        case('basic')
+            .currentRequest->username      = .username
+            .currentRequest->password      = .password
+            .currentRequest->basicAuthOnly = true
+
+        case('cookie')
+            not .authCookie ? .getAuthCookie
+
+            .currentRequest->options = (:CURLOPT_COOKIE = .authCookie)
+        }
+    }
+
+    private makeRequest(count::integer=1) => {
+        // Force a new request to be evaluated each time
+        // This is especially needed when re-authenticating
+        .currentResponse   = .currentRequest->makeRequest&response
+        local(status_code) = .currentResponse->statusCode
+
+        if(#status_code == 401 and #count == 1 and .authType == 'cookie') => {
+            .getAuthCookie
+            .setupAuthentication
+            return .makeRequest(2)
+
+        else(#status_code > 299)
+            fail(#status_code, .currentResponse->statusMsg)
+        }
+    }
+
+    private getAuthCookie => {
+        local(auth_req) = self->asCopy
+        #auth_req->sessionNew
+
+        .authCookie = #auth_req->currentResponse->header(`Set-Cookie`)->split(';')->first
     }
 }

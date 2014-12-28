@@ -235,6 +235,82 @@ describe(::couchDB_server) => {
     }
 
 
+    describe(`-> session`) => {
+        it(`creates a request with the proper path and Accept header`) => {
+            protect => { #server->session }
+
+            expect("/_session", #server->currentRequest->urlPath)
+            expect(#server->currentRequest->headers >> pair(`Accept` = "application/json"))
+        }
+
+        it(`creates a request with the query parameter basic=true when basic is specified`) => {
+            protect => { #server->session(-basic) }
+
+            expect(#server->currentRequest->getParams >> pair("basic", true))
+        }
+    }
+
+    describe(`-> sessionNew`) => {
+        it(`creates a request with the proper path and method`) => {
+            protect => { #server->sessionNew }
+
+            expect("/_session", #server->currentRequest->urlPath)
+            expect("POST"     , #server->currentRequest->method)
+        }
+
+        it(`creates a request with the proper Accept and Content-Type headers`) => {
+            protect => { #server->sessionNew }
+
+            expect(#server->currentRequest->headers >> pair(`Accept`       = "application/json"))
+            expect(#server->currentRequest->headers >> pair(`Content-Type` = "application/json"))
+        }
+
+        it(`creates a request with a JSON body with the stored username and password`) => {
+            #server->username = "marty"
+            #server->password = "McFly"
+
+            protect => { #server->sessionNew }
+            local(request_body) = json_decode(#server->currentRequest->postParams)
+
+            expect("marty", #request_body->find(`name`))
+            expect("McFly", #request_body->find(`password`))
+        }
+
+        it(`sets up the next query param if redirectPath specified`) => {
+            protect => { #server->sessionNew(-redirectPath="/") }
+
+            expect(#server->currentRequest->getParams >> pair("next", "/"))
+        }
+
+        it(`takes a username and password parameters to set the username and password to use for authentication`) => {
+            protect => { #server->sessionNew("doc", "Brown") }
+            local(request_body) = json_decode(#server->currentRequest->postParams)
+
+            expect("doc", #server->username)
+            expect("doc", #request_body->find(`name`))
+
+            expect("Brown", #server->password)
+            expect("Brown", #request_body->find(`password`))
+        }
+
+        it(`allows for specifying the redirectPath when also specifying user and password`) => {
+            protect => { #server->sessionNew("doc", "Brown", -redirectPath="/_log") }
+
+            expect(#server->currentRequest->getParams >> pair("next", "/_log"))
+        }
+    }
+
+    describe(`-> sessionDelete`) => {
+        it(`creates a request with the proper path, method, and Accept header`) => {
+            protect => { #server->sessionDelete }
+
+            expect("/_session", #server->currentRequest->urlPath)
+            expect("DELETE"   , #server->currentRequest->method)
+            expect(#server->currentRequest->headers >> pair(`Accept` = "application/json"))
+        }
+    }
+
+
     describe(`-> stats`) => {
         it(`creates a request with the proper path`) => {
             protect => { #server->stats }
@@ -242,7 +318,7 @@ describe(::couchDB_server) => {
             expect("/_stats", #server->currentRequest->urlPath)
         }
 
-        it(`creates a request with the proper Accept and Content-Type headers`) => {
+        it(`creates a request with the proper Accept header`) => {
             protect => { #server->stats }
 
             expect(#server->currentRequest->headers >> pair(`Accept` = "application/json"))
@@ -286,14 +362,3 @@ describe(::couchDB_server) => {
         }
     }
 }
-
-
-/*
-local(live) = couchDB_server('127.0.0.1', -noSSL)
-it(`returns an object with some expected keys / values`) => {
-    local(result) = #live->info
-
-    expect("Welcome", #result->find(`couchdb`))
-    expect->valueIsA(#result->find(`version`), ::string)
-}
-*/
