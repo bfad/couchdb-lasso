@@ -51,6 +51,124 @@ describe(::couchDB_server) => {
     }
 
 
+    describe(`-> config`) => {
+        it(`fails when requested by a non-admin`) => {
+            expect->errorCode(401) => {
+                #server->config
+            }
+        }
+
+        context(`called with no parameters`) => {
+            local(result) = #server_auth->config
+
+            it(`returns a map of maps of values`) => {
+                expect(::map, #result->type)
+                expect(::map, #result->find(#result->keys->first)->type)
+            }
+
+            it(`checks for being able to find the log level`) => {
+                expect(`info`, #result->find(`log`)->find(`level`))
+            }
+        }
+
+        context(`when sepcifying a section`) => {
+            local(result) = #server_auth->config('log')
+
+            it(`returns a map of the values for that section`) => {
+                expect(::map, #result->type)
+            }
+            it(`checks for being able to find the log level`) => {
+                expect(`info`, #result->find(`level`))
+            }
+        }
+
+        context(`when sepcifying a configuration option`) => {
+            local(result) = #server_auth->config('log', 'level')
+
+            it(`returns the value found for that configuration option`) => {
+                expect(`info`, #result)
+            }
+        }
+    }
+
+    describe(`-> configUpdate`) => {
+        it(`fails when requested by a non-admin`) => {
+            expect->errorCode(401) => {
+                #server->configUpdate('section', 'option', 'value')
+            }
+        }
+
+        it(`fails if the value being bassed is of the wrong type for the option`) => {
+            expect->errorCode(500) => {
+                #server_auth->configUpdate('log', 'level', 10)
+            }
+        }
+
+        context(`A Successful Request`) => {
+            local(fixup) = { #server_auth->configUpdate('log', 'level', 'info') }
+            local(result)
+
+            beforeAll => {
+                #result = #server_auth->configUpdate('log', 'level', '42')
+            }
+            afterAll => {
+                #fixup->invoke
+            }
+
+            it(`returns a 200 status code`) => {
+                handle_error => {#fixup->invoke}
+
+                expect(200, #server_auth->currentResponse->statusCode)
+            }
+            it(`returns the old value`) => {
+                handle_error => {#fixup->invoke}
+
+                expect('info', #result)
+            }
+            it(`updated the config value on the server`) => {
+                handle_error => {#fixup->invoke}
+
+                expect('42', #server_auth->config('log', 'level'))
+            }
+        }
+    }
+
+    describe(`-> configUpdate`) => {
+        it(`fails when requested by a non-admin`) => {
+            expect->errorCode(401) => {
+                #server->configDelete('section', 'option')
+            }
+        }
+
+        it(`fails when it requests an option that doesn't exist`) => {
+            expect->errorCode(404) => {
+                #server_auth->configDelete('section', 'not-exists')
+            }
+        }
+
+        context(`A Successful Request`) => {
+            local(result)
+
+            beforeAll => {
+                #server_auth->configUpdate('log', 'deleteme', '42')
+                #result = #server_auth->configDelete('log', 'deleteme')
+            }
+
+            it(`returns a 200 status code`) => {
+                expect(200, #server_auth->currentResponse->statusCode)
+            }
+            it(`returns the old value`) => {
+                expect('42', #result)
+            }
+            it(`updated the config value on the server`) => {
+                expect->errorCode(404) => {
+                    #server_auth->config('log', 'deleteme')
+                }
+            }
+        }
+    }
+
+
     describe(`-> dbUpdates`) => {
         it(`fails when requested by a non-admin`) => {
             expect->errorCode(401) => {

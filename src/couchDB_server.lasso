@@ -62,6 +62,43 @@ define couchDB_server => type {
         return json_decode(.currentResponse->bodyString)
     }
 
+    public config(section::string='', option::string='') => {
+        local(path) = '/_config'
+
+        if(#section->isNotEmpty) => {
+            #path->append('/' + #section)
+
+            #option->isNotEmpty
+                ? #path->append('/' + #option)
+        }
+
+        .generateRequest(
+            #path,
+            -headers = (:`Accept` = "application/json")
+        )
+
+        return json_decode(.currentResponse->bodyString)
+    }
+
+    public configUpdate(section::string, option::string, value) => {
+        .generateRequest(
+            '/_config/' + #section + '/' + #option,
+            -method     = `PUT`,
+            -headers    = (:`Accept` = "application/json", `Content-Type` = "application/json"),
+            -postParams = json_encode(#value)
+        )
+        return json_decode(.currentResponse->bodyString)
+    }
+
+    public configDelete(section::string, option::string) => {
+        .generateRequest(
+            '/_config/' + #section + (#option->isNotEmpty? '/' + #option | ''),
+            -method     = `DELETE`,
+            -headers    = (:`Accept` = "application/json")
+        )
+        return json_decode(.currentResponse->bodyString)
+    }
+
     public dbUpdates(feed::string, -timeout::integer=60, -noHeartbeat::boolean=false) => {
         (:'longpoll', 'continuous', 'eventsource') !>> #feed
             ? fail(error_code_invalidParameter, "Invalid parameter passed to feed")
