@@ -130,16 +130,19 @@ define couchDB_server => type {
         return .currentResponse->statusCode == 202
     }
 
-    // TODO: CUSTOM Type Result (and or sub results)
     public session(-basic::boolean=false) => {
         .generateRequest(
             `/_session`,
             -headers   = (:`Accept` = "application/json"),
             -getParams = (#basic ? (:`basic` = true) | (:))
         )
-        return json_decode(.currentResponse->bodyString)
+        local(result) = json_decode(.currentResponse->bodyString)
+        local(value)  = #result->find(`info`)
+        #value->insert(`userCtx`=#result->find(`userCtx`))
+
+        return couchResponse_session(#value)
     }
-    // TODO: CUSTOM Type Result (and or sub results)
+
     public sessionNew(-redirectPath::string='') => {
         .generateRequest(
             `/_session`,
@@ -149,7 +152,7 @@ define couchDB_server => type {
             -postParams = json_encode(map(`name` = .username, `password` = .password))
         )
 
-        return json_decode(.currentResponse->bodyString)
+        return (json_decode(.currentResponse->bodyString)->insert(`cookie`=.currentResponse->header(`Set-Cookie`))&)
     }
     public sessionNew(username::string, password::string, -redirectPath::string = '') => {
         .username = #username
@@ -165,7 +168,7 @@ define couchDB_server => type {
             -headers = (:`Accept` = "application/json")
         )
 
-        return currentResponse->statusCode == 200
+        return .currentResponse->statusCode == 200
     }
 
     public stats => {
@@ -249,7 +252,7 @@ define couchDB_server => type {
             .setupAuthentication
             return .makeRequest(2)
 
-        else(#status_code > 299)
+        else(#status_code > 399)
             fail(#status_code, .currentResponse->statusMsg)
         }
     }

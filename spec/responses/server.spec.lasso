@@ -225,6 +225,89 @@ describe(::couchDB_server) => {
     }
 
 
+    describe(`-> session`) => {
+        context(`No authentication stored`) => {
+            it(`fails when -basic is specified`) => {
+                expect->errorCode(401) => {
+                    #server->session(-basic)
+                }
+            }
+            local(result) = #server->session
+            it(`returns a couchResponse_session object`) => {
+                expect(::couchResponse_session, #result->type)
+            }
+            it(`has no authenticated value`) => {
+                expect(void, #result->authenticated)
+            }
+            it(`has no username or roles in the user context object`) => {
+                local(item) = #result->userContext
+                expect(::couchResponse_userContext, #item->type)
+                expect(::null, #item->name->type)
+                expect(#item->roles->isEmpty)
+            }
+        }
+
+        context(`An authenticated connection`) => {
+            local(result) = #server_auth->session
+            it(`returns a couchResponse_session object`) => {
+                expect(::couchResponse_session, #result->type)
+            }
+            it(`has an authenticated value`) => {
+                expect(#result->authenticated->isNotEmpty)
+            }
+            it(`has a user context object with a username and roles setup`) => {
+                local(item) = #result->userContext
+                expect(::couchResponse_userContext, #item->type)
+                expect(#server_auth->username     , #item->name)
+                expect(#item->roles->isNotEmpty)
+            }
+        }
+    }
+
+
+    describe(`-> sessionNew`) => {
+        it(`fails when passed bad credentials`) => {
+            expect->errorCode(401) => {
+                mock_server_no_auth->sessionNew('fail', 'please')
+            }
+        }
+
+        it(`returns a map authentication cookie data and roles and a 200 status code`) => {
+            local(item)   = #server_auth->sessionNew
+            local(cookie) = #server_auth->currentResponse->header(`Set-Cookie`)
+
+            expect(200    , #server_auth->currentResponse->statusCode)
+            expect(::map  , #item->type)
+            expect(#cookie, #item->find(`cookie`))
+            expect(::array, #item->find(`roles`)->type)
+        }
+
+        it(`returns a 302 status code if -redirectPath is set`) => {
+            #server_auth->sessionNew(-redirectPath='/_log')
+
+            expect(302, #server_auth->currentResponse->statusCode)
+        }
+    }
+
+
+    describe(`-> sessionDelete`) => {
+        it(`returns true when no authentication credentials are stored`) => {
+            expect(#server->sessionDelete)
+        }
+
+        it(`returns true when authentication has expired`) => {
+            local(test) = #server_auth->asCopy
+            #test->authCookie = 'EXPIREDNOW'
+
+            expect(#server->sessionDelete)
+        }
+
+        it(`returns true when normal authentication`) => {
+            expect(#server->sessionDelete)
+        }
+    }
+
+
     describe(`-> stats`) => {
         it(`returns a couchResponse_allStats object when called with no parameters`) => {
             expect(::couchResponse_allStats, #server->stats->type)
