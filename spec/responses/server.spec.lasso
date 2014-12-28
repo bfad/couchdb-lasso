@@ -51,6 +51,47 @@ describe(::couchDB_server) => {
     }
 
 
+    describe(`-> config`) => {
+        it(`fails when requested by a non-admin`) => {
+            expect->errorCode(401) => {
+                #server->config
+            }
+        }
+
+        context(`called with no parameters`) => {
+            local(result) = #server_auth->config
+
+            it(`returns a map of maps of values`) => {
+                expect(::map, #result->type)
+                expect(::map, #result->find(#result->keys->first)->type)
+            }
+
+            it(`checks for being able to find the log level`) => {
+                expect(`info`, #result->find(`log`)->find(`level`))
+            }
+        }
+
+        context(`when sepcifying a section`) => {
+            local(result) = #server_auth->config('log')
+
+            it(`returns a map of the values for that section`) => {
+                expect(::map, #result->type)
+            }
+            it(`checks for being able to find the log level`) => {
+                expect(`info`, #result->find(`level`))
+            }
+        }
+
+        context(`when sepcifying a configuration option`) => {
+            local(result) = #server_auth->config('log', 'level')
+
+            it(`returns the value found for that configuration option`) => {
+                expect(`info`, #result)
+            }
+        }
+    }
+
+
     describe(`-> dbUpdates`) => {
         it(`fails when requested by a non-admin`) => {
             expect->errorCode(401) => {

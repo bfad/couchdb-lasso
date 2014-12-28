@@ -68,6 +68,47 @@ describe(::couchDB_server) => {
         }
     }
 
+    describe(`-> config`) => {
+        context(`with no parameters`) => {
+            beforeAll => {
+                protect => { #server->config }
+            }
+            it(`creates a request with the proper path`) => {
+                expect("/_config", #server->currentRequest->urlPath)
+            }
+
+            it(`creates a request with a header that specifies it expects a json response`) => {
+                expect(#server->currentRequest->headers >> pair(`Accept` = "application/json"))
+            }
+        }
+
+        context(`specifying the section`) => {
+            beforeAll => {
+                protect => { #server->config('section') }
+            }
+            it(`creates a request with the proper path`) => {
+                expect("/_config/section", #server->currentRequest->urlPath)
+            }
+
+            it(`creates a request with a header that specifies it expects a json response`) => {
+                expect(#server->currentRequest->headers >> pair(`Accept` = "application/json"))
+            }
+        }
+
+        context(`specifying a specific configuration option`) => {
+            beforeAll => {
+                protect => { #server->config('section', 'option') }
+            }
+            it(`creates a request with the proper path`) => {
+                expect("/_config/section/option", #server->currentRequest->urlPath)
+            }
+
+            it(`creates a request with a header that specifies it expects a json response`) => {
+                expect(#server->currentRequest->headers >> pair(`Accept` = "application/json"))
+            }
+        }
+    }
+
     describe(`-> dbUpdates`) => {
         it(`fails if not passed a proper feed parameter`) => {
             expect->errorCode(error_code_invalidParameter) => {
