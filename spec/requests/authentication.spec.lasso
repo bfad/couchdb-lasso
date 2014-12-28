@@ -55,14 +55,37 @@ describe(`Cookie Authentication`) => {
             expect->errorCode(0) => {
                 #server->log(-bytes=1)
             }
-log_always(#server->currentResponse->statusCode)
-            //expect(::string, #server->authCookie->type)
+
+            expect(::string, #server->authCookie->type)
         }
     }
 
 
-    context(`Valid stored cookie`) => {}
+    context(`Valid stored cookie`) => {
+        local(good_cookie) = mock_server_cookie_auth->sessionNew&currentResponse->header(`Set-Cookie`)->split(';')->first
+        
+        it(`sets the cookie in the curl options and successfully authenticates`) => {
+            local(server) = mock_server_cookie_auth
+            #server->authCookie = #good_cookie
+
+            expect->errorCode(0) => {
+                #server->log(-bytes=1)
+            }
+
+            expect(#server->currentRequest->options >> pair(CURLOPT_COOKIE = #good_cookie))
+        }
+    }
 
 
-    context(`Invalid stored cookie`) => {}
+    context(`Invalid stored cookie`) => {
+        it(`re-authenticates to get an unexpired cookie`) => {
+            local(server) = mock_server_cookie_auth
+            #server->authCookie = 'bad cookie'
+
+            expect->errorCode(0) => {
+                #server->log(-bytes=1)
+            }
+            expect('bad cookie' != #server->authCookie)
+        }
+    }
 }

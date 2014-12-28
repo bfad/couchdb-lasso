@@ -23,6 +23,7 @@ if(not var_defined(`_couch_loaded`)) => {
 
     var(_couch_loaded) = true
 
+    define mock_server_no_auth    => couchDB_server('127.0.0.1', -noSSL)
     define mock_server_basic_auth => couchDB_server(
                                         "127.0.0.1",
                                         -username = "tester",

@@ -216,13 +216,48 @@ define couchDB_server => type {
 
 
     private generateRequest(path::string, ...) => {
-        .currentRequest  = http_request(:(:.baseURL + #path) + (#rest || (:)))
         .currentResponse = null
+        .currentRequest  = http_request(:(:.baseURL + #path) + (#rest || (:)))
+
+        // If posting to /_session, trying to get a new Authentication token, so don't setup auth
+        #path == "/_session" and .currentRequest->method == "POST"
+            ? null
+            | .setupAuthentication
+    }
+    private setupAuthentication => {
+        match(.authType) => {
+        case('basic')
+            .currentRequest->username      = .username
+            .currentRequest->password      = .password
+            .currentRequest->basicAuthOnly = true
+
+        case('cookie')
+            not .authCookie ? .getAuthCookie
+
+            .currentRequest->options = (:CURLOPT_COOKIE = .authCookie)
+        }
     }
 
-    private makeRequest => {
-        .currentResponse = .currentRequest->response
+    private makeRequest(count::integer=1) => {
+        // Force a new request to be evaluated each time
+        // This is especially needed when re-authenticating
+        .currentResponse   = .currentRequest->makeRequest&response
+        local(status_code) = .currentResponse->statusCode
 
-        fail_if(.currentResponse->statusCode > 299, .currentResponse->statusCode, .currentResponse->statusMsg)
+        if(#status_code == 401 and #count == 1 and .authType == 'cookie') => {
+            .getAuthCookie
+            .setupAuthentication
+            return .makeRequest(2)
+
+        else(#status_code > 299)
+            fail(#status_code, .currentResponse->statusMsg)
+        }
+    }
+
+    private getAuthCookie => {
+        local(auth_req) = self->asCopy
+        #auth_req->sessionNew
+
+        .authCookie = #auth_req->currentResponse->header(`Set-Cookie`)->split(';')->first
     }
 }
