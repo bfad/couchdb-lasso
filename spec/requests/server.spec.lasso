@@ -129,6 +129,22 @@ describe(::couchDB_server) => {
         }
     }
 
+
+    describe(`-> configDelete`) => {
+        beforeAll => {
+            protect => { #server->configDelete('section', 'option') }
+        }
+        it(`creates a request with the proper path and method`) => {
+            expect("/_config/section/option", #server->currentRequest->urlPath)
+            expect("DELETE"                 , #server->currentRequest->method)
+        }
+
+        it(`creates a request with the proper Accept header`) => {
+            expect(#server->currentRequest->headers >> pair(`Accept` = "application/json"))
+        }
+    }
+
+
     describe(`-> dbUpdates`) => {
         it(`fails if not passed a proper feed parameter`) => {
             expect->errorCode(error_code_invalidParameter) => {

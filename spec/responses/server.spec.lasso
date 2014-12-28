@@ -127,8 +127,43 @@ describe(::couchDB_server) => {
             }
             it(`updated the config value on the server`) => {
                 handle_error => {#fixup->invoke}
-                
+
                 expect('42', #server_auth->config('log', 'level'))
+            }
+        }
+    }
+
+    describe(`-> configUpdate`) => {
+        it(`fails when requested by a non-admin`) => {
+            expect->errorCode(401) => {
+                #server->configDelete('section', 'option')
+            }
+        }
+
+        it(`fails when it requests an option that doesn't exist`) => {
+            expect->errorCode(404) => {
+                #server_auth->configDelete('section', 'not-exists')
+            }
+        }
+
+        context(`A Successful Request`) => {
+            local(result)
+
+            beforeAll => {
+                #server_auth->configUpdate('log', 'deleteme', '42')
+                #result = #server_auth->configDelete('log', 'deleteme')
+            }
+
+            it(`returns a 200 status code`) => {
+                expect(200, #server_auth->currentResponse->statusCode)
+            }
+            it(`returns the old value`) => {
+                expect('42', #result)
+            }
+            it(`updated the config value on the server`) => {
+                expect->errorCode(404) => {
+                    #server_auth->config('log', 'deleteme')
+                }
             }
         }
     }
