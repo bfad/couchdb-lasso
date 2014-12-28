@@ -109,6 +109,26 @@ describe(::couchDB_server) => {
         }
     }
 
+
+    describe(`-> configUpdate`) => {
+        beforeAll => {
+            protect => { #server->configUpdate('section', 'option', 'value') }
+        }
+        it(`creates a request with the proper path`) => {
+            expect("/_config/section/option", #server->currentRequest->urlPath)
+        }
+
+        it(`creates a request with the proper Accept and Content-Type headers`) => {
+            expect(#server->currentRequest->headers >> pair(`Accept`       = "application/json"))
+            expect(#server->currentRequest->headers >> pair(`Content-Type` = "application/json"))
+        }
+
+        it(`creates a request with the PUT methd and proper request body`) => {
+            expect(`PUT`    , #server->currentRequest->method)
+            expect(`"value"`, #server->currentRequest->postParams)
+        }
+    }
+
     describe(`-> dbUpdates`) => {
         it(`fails if not passed a proper feed parameter`) => {
             expect->errorCode(error_code_invalidParameter) => {

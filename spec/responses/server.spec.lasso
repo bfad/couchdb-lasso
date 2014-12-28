@@ -91,6 +91,48 @@ describe(::couchDB_server) => {
         }
     }
 
+    describe(`-> configUpdate`) => {
+        it(`fails when requested by a non-admin`) => {
+            expect->errorCode(401) => {
+                #server->configUpdate('section', 'option', 'value')
+            }
+        }
+
+        it(`fails if the value being bassed is of the wrong type for the option`) => {
+            expect->errorCode(500) => {
+                #server_auth->configUpdate('log', 'level', 10)
+            }
+        }
+
+        context(`A Successful Request`) => {
+            local(fixup) = { #server_auth->configUpdate('log', 'level', 'info') }
+            local(result)
+
+            beforeAll => {
+                #result = #server_auth->configUpdate('log', 'level', '42')
+            }
+            afterAll => {
+                #fixup->invoke
+            }
+
+            it(`returns a 200 status code`) => {
+                handle_error => {#fixup->invoke}
+
+                expect(200, #server_auth->currentResponse->statusCode)
+            }
+            it(`returns the old value`) => {
+                handle_error => {#fixup->invoke}
+
+                expect('info', #result)
+            }
+            it(`updated the config value on the server`) => {
+                handle_error => {#fixup->invoke}
+                
+                expect('42', #server_auth->config('log', 'level'))
+            }
+        }
+    }
+
 
     describe(`-> dbUpdates`) => {
         it(`fails when requested by a non-admin`) => {
