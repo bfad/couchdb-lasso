@@ -74,8 +74,9 @@ define json_decode => type {
             #char == json_quote_double and not #esc?
                 returnHome
             
-            #char == json_back_slash?
-                #esc = !#esc                    
+            #char == json_back_slash and not #esc
+                ? #esc = true
+                | #esc = false
                 
             currentCapture->restart
         }()
