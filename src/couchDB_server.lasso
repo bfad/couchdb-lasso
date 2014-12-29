@@ -43,7 +43,6 @@ define couchDB_server => type {
         return json_decode(.currentResponse->bodyString)
     }
 
-    // TODO: Custom Type Result
     public activeTasks => {
         .generateRequest(
             '/_active_tasks',
@@ -87,6 +86,7 @@ define couchDB_server => type {
             -headers    = (:`Accept` = "application/json", `Content-Type` = "application/json"),
             -postParams = json_encode(#value)
         )
+
         return json_decode(.currentResponse->bodyString)
     }
 
@@ -96,6 +96,7 @@ define couchDB_server => type {
             -method     = `DELETE`,
             -headers    = (:`Accept` = "application/json")
         )
+
         return json_decode(.currentResponse->bodyString)
     }
 
@@ -173,6 +174,7 @@ define couchDB_server => type {
             -headers   = (:`Accept` = "application/json"),
             -getParams = (#basic ? (:`basic` = true) | (:))
         )
+
         local(result) = json_decode(.currentResponse->bodyString)
         local(value)  = #result->find(`info`)
         #value->insert(`userCtx`=#result->find(`userCtx`))
@@ -213,6 +215,7 @@ define couchDB_server => type {
             '/_stats',
             -headers = (:`Accept` = "application/json")
         )
+
         return couchResponse_allStats(json_decode(.currentResponse->bodyString))
     }
 
@@ -221,6 +224,7 @@ define couchDB_server => type {
             '/_stats/' + #section + '/' + #statistic,
             -headers = (:`Accept` = "application/json")
         )
+
         local(result) = json_decode(.currentResponse->bodyString)->find(#section)
         #result->insert(`sectionName` = #section, `name` = #statistic)
 
@@ -232,6 +236,7 @@ define couchDB_server => type {
             '/_uuids',
             -headers = (:`Accept` = "application/json")
         )
+
         return json_decode(.currentResponse->bodyString)->find(`uuids`)->first
     }
     public uuids(count::integer) => {
@@ -242,6 +247,7 @@ define couchDB_server => type {
             -headers = (:`Accept` = "application/json"),
             -getParams = (:`count` = #count)
         )
+
         return json_decode(.currentResponse->bodyString)->find(`uuids`)
     }
 
@@ -264,6 +270,7 @@ define couchDB_server => type {
             ? null
             | .setupAuthentication
     }
+    
     private setupAuthentication => {
         match(.authType) => {
         case('basic')
