@@ -1,16 +1,24 @@
-This library is a set of method and types designed to facilitate Lasso
-interacting with CouchDB.
+# Impelenting A Lasso Interface for the CouchDB API
 
-The master branch contains the latest stable release while the dev branch has
-the latest development work.
+This library is a set of methods and types designed to facilitate interacting
+with CouchDB using the Lasso programming language.
+
+The master branch contains the latest stable release (version 0.1.0) while the
+dev branch has the latest development work.
 
 
+## Installation
 
+For the moment, installation consists of copying the lib and src directories to
+the appropriate LassoStartup folder. If you already have http-lasso or the
+json_(de/en)code methods, then you can remove them from the LassoStartup folder.
+At any rate, the CouchDB connector has been developed against the versions of
+these libraries found in the lib folder.
 
 
 ## License
 
-Copyright 2013 Bradley Lindsay
+Copyright 2014 Bradley Lindsay
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
