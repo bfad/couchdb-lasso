@@ -1,4 +1,4 @@
-# Impelenting A Lasso Interface for the CouchDB API
+# A Lasso Interface for the CouchDB API
 
 This library is a set of methods and types designed to facilitate interacting
 with CouchDB using the Lasso programming language.
