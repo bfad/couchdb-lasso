@@ -3,8 +3,8 @@
 This library is a set of methods and types designed to facilitate interacting
 with CouchDB using the Lasso programming language.
 
-The master branch contains the latest stable release while the dev branch has
-the latest development work.
+The master branch contains the latest stable release (version 0.1.0) while the
+dev branch has the latest development work.
 
 
 ## Installation

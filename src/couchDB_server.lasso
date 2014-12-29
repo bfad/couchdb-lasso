@@ -9,7 +9,8 @@ define couchDB_server => type {
 
         private currentRequest,
         private currentResponse,
-        private authType::string
+        private authType::string,
+        private connectorVersion = `0.1.0`
 
 
     public onCreate(
@@ -255,9 +256,10 @@ define couchDB_server => type {
 
     // Introspection Accessors
     public
-        baseURL         => .protocol + '://' + .host + ':' + .port,
-        currentRequest  => .`currentRequest`,
-        currentResponse => .`currentResponse` || .makeRequest&currentResponse
+        connectorVersion => .`connectorVersion`,
+        baseURL          => .protocol + '://' + .host + ':' + .port,
+        currentRequest   => .`currentRequest`,
+        currentResponse  => .`currentResponse` || .makeRequest&currentResponse
 
 
 
@@ -270,7 +272,7 @@ define couchDB_server => type {
             ? null
             | .setupAuthentication
     }
-    
+
     private setupAuthentication => {
         match(.authType) => {
         case('basic')
