@@ -113,4 +113,45 @@ describe(::couchDB_database) => {
             expect(not #db->exists)
         }
     }
+
+
+    describe(`-> createDocument`) => {
+        // Need to figure out how to not allow public writers before this test will pass
+        //it(`fails when not logged in as an admin`) => {
+        //    expect->errorCode(401) => {
+        //        #db_noauth->createDocument(map("foo"="bar"))
+        //    }
+        //}
+
+        it(`fails if trying to create a document in a database that doesn't already exist`) => {
+            local(db) = couchDB_database(#server_auth, 'noexists')
+            
+            expect->errorCode(404) => {
+                #db->createDocument(map("foo"="bar"))
+            }
+        }
+
+        it(`fails if the database name uses restricted characters`) => {
+            local(db) = couchDB_database(#server_auth, 'bad chars!')
+
+            expect->errorCode(400) => {
+                #db->createDocument(map("foo"="bar"))
+            }
+        }
+
+        it(`returns a map with the id and revision number, and a 201 response`) => {
+            local(result) = #db_auth->createDocument(map("foo"="bar"))
+
+            expect(201     , #db_auth->server->currentResponse->statusCode)
+            expect(::string, #result->find(`id`)->type)
+            expect(::string, #result->find(`rev`)->type)
+        }
+
+        it(`returns a map with an id and has 202 response`) => {
+            local(result) = #db_auth->createDocument(map("foo"="bar"), -batchMode)
+
+            expect(202     , #db_auth->server->currentResponse->statusCode)
+            expect(::string, #result->find(`id`)->type)
+        }
+    }
 }

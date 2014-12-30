@@ -57,4 +57,34 @@ define couchDB_database => type {
 
         .server->currentResponse
     }
+
+    public createDocument(
+        data::map,
+        -waitForWrite::boolean=false,
+        -noWaitForWrite::boolean=false,
+        -batchMode::boolean=false
+    ) => {
+        local(headers)      = array(`Accept` = "application/json", `Content-Type` = "application/json")
+        local(query_params) = array
+
+        #waitForWrite and #noWaitForWrite
+            ? fail("It is a contradiction to specify to both wait and not wait for writes")
+        #waitForWrite
+            ? #headers->insert(`X-Couch-Full-Commit` = "true")
+        #noWaitForWrite
+            ? #headers->insert(`X-Couch-Full-Commit` = "false")
+
+        #batchMode
+            ? #query_params->insert(`batch`='ok')
+
+        .server->generateRequest(
+            .basePath,
+            -method     = "POST",
+            -headers    = #headers,
+            -getParams  = #query_params,
+            -postParams = json_encode(#data)
+        )
+
+        return json_decode(.server->currentResponse->bodyString)
+    }
 }
