@@ -15,7 +15,7 @@ define couchDB_database => type {
 
     public
         server   => .`server`,
-        basePath => '/' + .name
+        basePath => '/' + .name->encodeUrl
 
 
     public exists => {
@@ -27,5 +27,14 @@ define couchDB_database => type {
         protect => { .server->makeRequest }
 
         return .server->currentResponse->statusCode == 200
+    }
+
+    public info => {
+        .server->generateRequest(
+            .basePath,
+            -headers = (:`Accept` = "application/json")
+        )
+
+        return couchResponse_databaseInfo(json_decode(.server->currentResponse->bodyString))
     }
 }

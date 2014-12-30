@@ -29,4 +29,20 @@ describe(::couchDB_database) => {
             expect(404, #db->server->currentResponse->statusCode)
         }
     }
+
+
+    describe(`-> info`) => {
+        it(`fails when the database doesn't exist`) => {
+            local(db) = couchDB_database(#server_auth, 'noexists')
+
+            expect->errorCode(404) => {
+                #db->info
+            }
+        }
+
+        it(`returns a [couchResponse_databaseInfo] object and 200 response`) => {
+            expect(::couchResponse_databaseInfo, #db_auth->info->type)
+            expect(200                         , #db_auth->server->currentResponse->statusCode)
+        }
+    }
 }
