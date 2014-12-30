@@ -78,4 +78,39 @@ describe(::couchDB_database) => {
             expect(#db->exists)
         }
     }
+
+
+    describe(`-> delete`) => {
+        it(`fails when not logged in as an admin`) => {
+            expect->errorCode(401) => {
+                #db_noauth->delete
+            }
+        }
+
+        it(`fails if trying to delete a database that doesn't already exist`) => {
+            local(db) = couchDB_database(#server_auth, 'noexists')
+            
+            expect->errorCode(404) => {
+                #db->delete
+            }
+        }
+
+        it(`fails if the database name uses restricted characters`) => {
+            local(db) = couchDB_database(#server_auth, 'bad chars!')
+
+            expect->errorCode(400) => {
+                #db->delete
+            }
+        }
+
+        it(`has a 200 response and deletes the database`) => {
+            local(db) = couchDB_database(#server_auth, 'new_db')
+            #db->create
+            expect(#db->exists)
+
+            #db->delete
+            expect(200, #db->server->currentResponse->statusCode)
+            expect(not #db->exists)
+        }
+    }
 }

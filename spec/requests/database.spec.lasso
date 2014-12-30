@@ -57,4 +57,16 @@ describe(::couchDB_database) => {
             expect(#req->headers >> pair(`Accept` = "application/json"))
         }
     }
+
+
+    describe(`-> delete`) => {
+        it(`creates a request with the proper path, method, and Accept header`) => {
+            protect => { #database->delete }
+            local(req) = #database->server->currentRequest
+
+            expect('/name' , #req->urlPath)
+            expect('DELETE', #req->method)
+            expect(#req->headers >> pair(`Accept` = "application/json"))
+        }
+    }
 }

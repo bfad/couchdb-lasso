@@ -47,4 +47,14 @@ define couchDB_database => type {
 
         .server->currentResponse
     }
+
+    public delete => {
+        .server->generateRequest(
+            .basePath,
+            -method  = "DELETE",
+            -headers = (:`Accept` = "application/json")
+        )
+
+        .server->currentResponse
+    }
 }
