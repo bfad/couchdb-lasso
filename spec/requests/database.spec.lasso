@@ -28,6 +28,7 @@ describe(::couchDB_database) => {
         }
     }
 
+
     describe(`-> info`) => {
         it(`creates a request with the proper path and Accept header`) => {
             protect => { #database->info }
@@ -42,6 +43,18 @@ describe(::couchDB_database) => {
             protect => { #db->info }
 
             expect(`/my%2Fname%2B%24`, #db->server->currentRequest->urlPath)
+        }
+    }
+
+
+    describe(`-> create`) => {
+        it(`creates a request with the proper path, method, and Accept header`) => {
+            protect => { #database->create }
+            local(req) = #database->server->currentRequest
+
+            expect('/name', #req->urlPath)
+            expect('PUT'  , #req->method)
+            expect(#req->headers >> pair(`Accept` = "application/json"))
         }
     }
 }

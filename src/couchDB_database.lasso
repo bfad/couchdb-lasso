@@ -37,4 +37,14 @@ define couchDB_database => type {
 
         return couchResponse_databaseInfo(json_decode(.server->currentResponse->bodyString))
     }
+
+    public create => {
+        .server->generateRequest(
+            .basePath,
+            -method  = "PUT",
+            -headers = (:`Accept` = "application/json")
+        )
+
+        .server->currentResponse
+    }
 }

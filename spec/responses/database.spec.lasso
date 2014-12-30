@@ -45,4 +45,37 @@ describe(::couchDB_database) => {
             expect(200                         , #db_auth->server->currentResponse->statusCode)
         }
     }
+
+
+    describe(`-> create`) => {
+        it(`fails when not logged in as an admin`) => {
+            expect->errorCode(401) => {
+                #db_noauth->create
+            }
+        }
+
+        it(`fails if trying to create a database that already exists`) => {
+            expect->errorCode(412) => {
+                #db_auth->create
+            }
+        }
+
+        it(`fails if the database name uses restricted characters`) => {
+            local(db) = couchDB_database(#server_auth, 'bad chars!')
+
+            expect->errorCode(400) => {
+                #db->create
+            }
+        }
+
+        it(`has a 201 response and creates the database`) => {
+            handle => {#server_auth->generateRequest('/new_db', -method="DELETE")&makeRequest}
+
+            local(db) = couchDB_database(#server_auth, 'new_db')
+            #db->create
+
+            expect(201, #db->server->currentResponse->statusCode)
+            expect(#db->exists)
+        }
+    }
 }
