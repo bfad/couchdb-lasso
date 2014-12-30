@@ -263,7 +263,7 @@ define couchDB_server => type {
 
 
 
-    private generateRequest(path::string, ...) => {
+    public generateRequest(path::string, ...) => {
         .currentResponse = null
         .currentRequest  = http_request(:(:.baseURL + #path) + (#rest || (:)))
 
@@ -287,10 +287,15 @@ define couchDB_server => type {
         }
     }
 
-    private makeRequest(count::integer=1) => {
+    public makeRequest(count::integer=1) => {
         // Force a new request to be evaluated each time
         // This is especially needed when re-authenticating
-        .currentResponse   = .currentRequest->makeRequest&response
+        //
+        // Due to issues with HEAD requests they need to be handled differently
+        `HEAD` == .currentRequest->method
+            ? .currentResponse = get_head_response(.currentRequest)
+            | .currentResponse = .currentRequest->makeRequest&response
+        
         local(status_code) = .currentResponse->statusCode
 
         if(#status_code == 401 and #count == 1 and .authType == 'cookie') => {
@@ -301,6 +306,11 @@ define couchDB_server => type {
         else(#status_code > 399)
             fail(#status_code, .currentResponse->statusMsg)
         }
+    }
+
+    public clearRequest => {
+        .currentRequest = null
+        .currentResponse = null
     }
 
     private getAuthCookie => {
