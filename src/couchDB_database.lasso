@@ -87,4 +87,85 @@ define couchDB_database => type {
 
         return json_decode(.server->currentResponse->bodyString)
     }
+
+    public allDocuments(
+        -includeConflicts::boolean=false,
+        -descending::boolean=false,
+        -endKey::string='',
+        -endKeyDocumentID::string='',
+        -includeData::boolean=false,
+        -inclusiveEnd::boolean=false,
+        -key::string='',
+        -keys::trait_finiteForEach=(:),
+        -limit::integer=-1,
+        -skip::integer=-1,
+        -stale::string='',
+        -startKey::string='',
+        -startKeyDocumentID::string='',
+        -includeUpdateSequence::boolean=false
+    ) => {
+        local(method)       = ''
+        local(query_params) = array
+        local(postParams) 
+
+        #limit != -1
+            ? #query_params->insert(`limit` = #limit)
+
+        #skip != -1
+            ? #query_params->insert(`skip` = #skip)
+
+
+        #includeConflicts
+            ? #query_params->insert(`conflicts` = true)
+
+        #descending
+            ? #query_params->insert(`descending` = true)
+
+        #includeData
+            ? #query_params->insert(`include_docs` = true)
+
+        #inclusiveEnd
+            ? #query_params->insert(`inclusive_end` = true)
+
+        #includeUpdateSequence
+            ? #query_params->insert(`update_seq` = true)
+
+
+        #endKey->isNotEmpty
+            ? #query_params->insert(`endkey` = #endKey)
+
+        #endKeyDocumentID->isNotEmpty
+            ? #query_params->insert(`endkey_docid` = #endKeyDocumentID)
+
+        #key->isNotEmpty
+            ? #query_params->insert(`key` = #key)
+
+        #stale->isNotEmpty
+            ? #query_params->insert(`stale` = #stale)
+
+        #startKey->isNotEmpty
+            ? #query_params->insert(`startkey` = #startKey)
+
+        #startKeyDocumentID->isNotEmpty
+            ? #query_params->insert(`startkey_docid` = #startKeyDocumentID)
+
+        if(#keys->isNotEmpty) => {
+            (: ::array, ::staticarray) !>> #keys->type
+                ? #keys = (with key in keys select #key)->asStaticarray
+
+            #method     = `POST`
+            #postParams = json_encode(map(`keys`=#keys))
+        }
+
+
+        .server->generateRequest(
+            .basePath + '/_all_docs',
+            -method     = #method,
+            -headers    = (:`Accept` = "application/json"),
+            -getParams  = #query_params,
+            -postParams = #postParams
+        )
+
+        return couchResponse_allDocuments(json_decode(.server->currentResponse->bodyString))
+    }
 }
