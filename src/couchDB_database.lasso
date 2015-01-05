@@ -151,7 +151,7 @@ define couchDB_database => type {
 
         if(#keys->isNotEmpty) => {
             (: ::array, ::staticarray) !>> #keys->type
-                ? #keys = (with key in keys select #key)->asStaticarray
+                ? #keys = (with key in #keys select #key)->asStaticarray
 
             #method     = `POST`
             #postParams = json_encode(map(`keys`=#keys))
@@ -167,5 +167,43 @@ define couchDB_database => type {
         )
 
         return couchResponse_allDocuments(json_decode(.server->currentResponse->bodyString))
+    }
+
+    public bulkActionDocuments(
+        data::trait_finiteForEach,
+        -waitForWrite::boolean=false,
+        -noWaitForWrite::boolean=false,
+        -allOrNothing::boolean=false,
+        -preventNewRevision::boolean=false
+    ) => {
+        (: ::array, ::staticarray) !>> #data->type
+            ? #data = (with datum in #data select #datum)->asStaticarray
+
+        local(headers) = array(`Accept` = "application/json", `Content-Type` = "application/json")
+        local(body)    = map("docs"=#data)
+
+        #waitForWrite and #noWaitForWrite
+            ? fail("It is a contradiction to specify to both wait and not wait for writes")
+        #waitForWrite
+            ? #headers->insert(`X-Couch-Full-Commit` = "true")
+        #noWaitForWrite
+            ? #headers->insert(`X-Couch-Full-Commit` = "false")
+
+        #allOrNothing
+            ? #body->insert(`all_or_nothing` = true)
+        #preventNewRevision
+            ? #body->insert(`new_edits` = false)
+
+        
+
+
+        .server->generateRequest(
+            .basePath + '/_bulk_docs',
+            -method     = "POST",
+            -headers    = #headers,
+            -postParams = json_encode(#body)
+        )
+        
+        return json_decode(.server->currentResponse->bodyString)
     }
 }

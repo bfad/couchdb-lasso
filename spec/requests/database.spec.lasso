@@ -183,4 +183,70 @@ describe(::couchDB_database) => {
             }
         }
     }
+
+
+    describe(`-> bulkActionDocuments`) => {
+        it(`creates a request with the proper path and method`) => {
+            protect => { #database->bulkActionDocuments((:map("foo" = "bar"))) }
+            local(req) = #database->server->currentRequest
+
+            expect('/name/_bulk_docs', #req->urlPath)
+            expect('POST'            , #req->method)
+        }
+
+        it(`creates a request with the proper Accept and Content-Type headers`) => {
+            protect => { #database->bulkActionDocuments((:map("foo" = "bar"))) }
+            local(req) = #database->server->currentRequest
+
+            expect(#req->headers >> pair(`Accept`       = "application/json"))
+            expect(#req->headers >> pair(`Content-Type` = "application/json"))
+        }
+
+        it(`creates a request with a JSON request body with a map with one key (docs) that contains the values passed`) => {
+            protect => { #database->bulkActionDocuments((:map("foo" = "bar"))) }
+            local(result) = json_decode(#database->server->currentRequest->postParams)
+            local(data)   = #result->find(`docs`)
+
+            expect(::map, #result->type)
+            expect(1    , #result->keys->size)
+            expect(::array , #data->type)
+            expect((:"foo"), #data->first->keys)
+            expect((:"bar"), #data->first->values)
+        }
+
+        it(`creates a request with the X-Couch-Full-Commit header set to true when passed -waitForWrite`) => {
+            protect => { #database->bulkActionDocuments((:map("foo" = "bar")), -waitForWrite) }
+            local(req) = #database->server->currentRequest
+
+            expect('/name/_bulk_docs', #req->urlPath)
+            expect(#req->headers >> pair(`X-Couch-Full-Commit` = "true"))
+        }
+
+        it(`creates a request with the X-Couch-Full-Commit header set to false when passed -noWaitForWrite`) => {
+            protect => { #database->bulkActionDocuments((:map("foo" = "bar")), -noWaitForWrite) }
+            local(req) = #database->server->currentRequest
+
+            expect(#req->headers >> pair(`X-Couch-Full-Commit` = "false"))
+        }
+
+        it(`fails if both -waitForWrite and -noWaitForWrite are passed at the same time`) => {
+            expect->errorCode(error_code_runtimeAssertion) => {
+                #database->bulkActionDocuments((:map("foo" = "bar")), -waitForWrite, -noWaitForWrite)
+            }
+        }
+
+        it(`adds in the all_or_nothing flag to the request body if set in request`) => {
+            protect => { #database->bulkActionDocuments((:map("foo" = "bar")), -allOrNothing) }
+            local(result) = json_decode(#database->server->currentRequest->postParams)
+
+            expect(true, #result->find(`all_or_nothing`))
+        }
+
+        it(`adds the new_edits flag set to false when -preventNewRevision is passed`) => {
+            protect => { #database->bulkActionDocuments((:map("foo" = "bar")), -preventNewRevision) }
+            local(result) = json_decode(#database->server->currentRequest->postParams)
+
+            expect(false, #result->find(`new_edits`))
+        }
+    }
 }

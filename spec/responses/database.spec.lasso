@@ -197,4 +197,37 @@ describe(::couchDB_database) => {
             }
         }
     }
+
+
+    describe(`-> bulkActionDocuments`) => {
+        // Need to figure out how to not allow public readers before this test will pass
+        //it(`fails when not logged in as an admin`) => {
+        //    expect->errorCode(401) => {
+        //        #db_noauth->bulkActionDocuments((: map("foo"="bar")))
+        //    }
+        //}
+
+        it(`fails if trying to create a document in a database that doesn't already exist`) => {
+            local(db) = couchDB_database(#server_auth, 'noexists')
+            
+            expect->errorCode(404) => {
+                #db->bulkActionDocuments((:map("foo"="bar")))
+            }
+        }
+
+        it(`returns on array of maps for the created, deleted, or updated elements`) => {
+            local(result) = #db_auth->bulkActionDocuments((:map("foo"="bar")))
+
+            expect(::array, #result->type)
+            expect(1      , #result->size)
+            expect(201    , #db_auth->server->currentResponse->statusCode)
+        }
+
+        // TODO: Figure out how to check this test
+        //context(`When transaction mode set to all-or-nothing`) => {
+        //    it(`fails when a document fails to validate`) => {
+        //        expect->errorCode(417) => {}
+        //    }
+        //}
+    }
 }
