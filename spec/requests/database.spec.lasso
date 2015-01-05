@@ -126,4 +126,127 @@ describe(::couchDB_database) => {
             expect(#req->getParams >> pair('batch', 'ok'))
         }
     }
+
+
+    describe(`-> allDocuments`) => {
+        it(`creates a request with the proper path and Accept header`) => {
+            protect => { #database->allDocuments }
+            local(req) = #database->server->currentRequest
+
+            expect('/name/_all_docs', #req->urlPath)
+            expect(#req->headers >> pair(`Accept` = "application/json"))
+        }
+
+        it(`creates a request with every possible parameter set`) => {
+            protect => {
+                #database->allDocuments(
+                    -includeConflicts      = true,
+                    -descending            = true,
+                    -endKey                = "endkey",
+                    -endKeyDocumentID      = "endkey_docid",
+                    -includeData           = true,
+                    -inclusiveEnd          = true,
+                    -key                   = "key",
+                    -limit                 = 4,
+                    -skip                  = 2,
+                    -stale                 = "stale",
+                    -startKey              = "startkey",
+                    -startKeyDocumentID    = "startkey_docid",
+                    -includeUpdateSequence = true
+                )
+            }
+            local(query_params) = #database->server->currentRequest->getParams
+
+            expect(#query_params >> pair(`conflicts`, true))
+            expect(#query_params >> pair(`descending`, true))
+            expect(#query_params >> pair(`endkey`, "endkey"))
+            expect(#query_params >> pair(`endkey_docid`, "endkey_docid"))
+            expect(#query_params >> pair(`include_docs`, true))
+            expect(#query_params >> pair(`inclusive_end`, true))
+            expect(#query_params >> pair(`key`, "key"))
+            expect(#query_params >> pair(`limit`, 4))
+            expect(#query_params >> pair(`skip`, 2))
+            expect(#query_params >> pair(`stale`, "stale"))
+            expect(#query_params >> pair(`startkey`, "startkey"))
+            expect(#query_params >> pair(`startkey_docid`, "startkey_docid"))
+            expect(#query_params >> pair(`update_seq`, true))
+        }
+
+        context(`specifying multiple keys`) => {
+            it(`sets the request method to POST with the keys sent as JSON in the request body`) => {
+                local(keys) = array("foo", "bar", "baz")
+                protect => { #database->allDocuments(-keys=#keys) }
+                local(req) = #database->server->currentRequest
+
+                expect(`POST`, #req->method)
+                expect(#keys , json_decode(#req->postParams)->find(`keys`))
+            }
+        }
+    }
+
+
+    describe(`-> bulkActionDocuments`) => {
+        it(`creates a request with the proper path and method`) => {
+            protect => { #database->bulkActionDocuments((:map("foo" = "bar"))) }
+            local(req) = #database->server->currentRequest
+
+            expect('/name/_bulk_docs', #req->urlPath)
+            expect('POST'            , #req->method)
+        }
+
+        it(`creates a request with the proper Accept and Content-Type headers`) => {
+            protect => { #database->bulkActionDocuments((:map("foo" = "bar"))) }
+            local(req) = #database->server->currentRequest
+
+            expect(#req->headers >> pair(`Accept`       = "application/json"))
+            expect(#req->headers >> pair(`Content-Type` = "application/json"))
+        }
+
+        it(`creates a request with a JSON request body with a map with one key (docs) that contains the values passed`) => {
+            protect => { #database->bulkActionDocuments((:map("foo" = "bar"))) }
+            local(result) = json_decode(#database->server->currentRequest->postParams)
+            local(data)   = #result->find(`docs`)
+
+            expect(::map, #result->type)
+            expect(1    , #result->keys->size)
+            expect(::array , #data->type)
+            expect((:"foo"), #data->first->keys)
+            expect((:"bar"), #data->first->values)
+        }
+
+        it(`creates a request with the X-Couch-Full-Commit header set to true when passed -waitForWrite`) => {
+            protect => { #database->bulkActionDocuments((:map("foo" = "bar")), -waitForWrite) }
+            local(req) = #database->server->currentRequest
+
+            expect('/name/_bulk_docs', #req->urlPath)
+            expect(#req->headers >> pair(`X-Couch-Full-Commit` = "true"))
+        }
+
+        it(`creates a request with the X-Couch-Full-Commit header set to false when passed -noWaitForWrite`) => {
+            protect => { #database->bulkActionDocuments((:map("foo" = "bar")), -noWaitForWrite) }
+            local(req) = #database->server->currentRequest
+
+            expect(#req->headers >> pair(`X-Couch-Full-Commit` = "false"))
+        }
+
+        it(`fails if both -waitForWrite and -noWaitForWrite are passed at the same time`) => {
+            expect->errorCode(error_code_runtimeAssertion) => {
+                #database->bulkActionDocuments((:map("foo" = "bar")), -waitForWrite, -noWaitForWrite)
+            }
+        }
+
+        it(`adds in the all_or_nothing flag to the request body if set in request`) => {
+            protect => { #database->bulkActionDocuments((:map("foo" = "bar")), -allOrNothing) }
+            local(result) = json_decode(#database->server->currentRequest->postParams)
+
+            expect(true, #result->find(`all_or_nothing`))
+        }
+
+        it(`adds the new_edits flag set to false when -preventNewRevision is passed`) => {
+            protect => { #database->bulkActionDocuments((:map("foo" = "bar")), -preventNewRevision) }
+            local(result) = json_decode(#database->server->currentRequest->postParams)
+
+            expect(false, #result->find(`new_edits`))
+        }
+    }
 }

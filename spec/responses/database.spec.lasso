@@ -154,4 +154,80 @@ describe(::couchDB_database) => {
             expect(::string, #result->find(`id`)->type)
         }
     }
+
+
+    describe(`-> allDocuments`) => {
+        // Need to figure out how to not allow public readers before this test will pass
+        //it(`fails when not logged in as an admin`) => {
+        //    expect->errorCode(401) => {
+        //        #db_noauth->allDocuments
+        //    }
+        //}
+
+        it(`fails if tyring to access documents in a database that doesn't exist`) => {
+            local(db) = couchDB_database(#server_auth, 'noexists')
+            
+            expect->errorCode(404) => {
+                #db->allDocuments
+            }
+        }
+
+        it(`returns a [couchResponse_allDocuments] object with a 200 response`) => {
+            expect(::couchResponse_allDocuments, #db_auth->allDocuments->type)
+            expect(200                         , #db_auth->server->currentResponse->statusCode)
+        }
+
+        it(`has every element in returned [couchResponse_allDocuments->rows] be a [couchResponse_documentMetaData]`) => {
+            #db_auth->createDocument(map("key"="value"))
+            local(rows) = #db_auth->allDocuments->rows
+
+            expect(#rows->size > 0)
+            with row in #rows do expect(::couchResponse_documentMetaData, #row->type)
+        }
+
+        context(`specifying multiple keys`) => {
+            it(`only returns documents with the specified keys`) => {
+                local(doc1) = #db_auth->createDocument(map(`doc1` = 1))
+                local(doc2) = #db_auth->createDocument(map(`doc2` = 2))
+                local(doc3) = #db_auth->createDocument(map(`doc3` = 3))
+                local(keys) = (:#doc1->find(`id`), #doc3->find(`id`))
+                local(rows) = #db_auth->allDocuments(-keys=#keys)->rows
+
+                expect(2, #rows->size)
+            }
+        }
+    }
+
+
+    describe(`-> bulkActionDocuments`) => {
+        // Need to figure out how to not allow public readers before this test will pass
+        //it(`fails when not logged in as an admin`) => {
+        //    expect->errorCode(401) => {
+        //        #db_noauth->bulkActionDocuments((: map("foo"="bar")))
+        //    }
+        //}
+
+        it(`fails if trying to create a document in a database that doesn't already exist`) => {
+            local(db) = couchDB_database(#server_auth, 'noexists')
+            
+            expect->errorCode(404) => {
+                #db->bulkActionDocuments((:map("foo"="bar")))
+            }
+        }
+
+        it(`returns on array of maps for the created, deleted, or updated elements`) => {
+            local(result) = #db_auth->bulkActionDocuments((:map("foo"="bar")))
+
+            expect(::array, #result->type)
+            expect(1      , #result->size)
+            expect(201    , #db_auth->server->currentResponse->statusCode)
+        }
+
+        // TODO: Figure out how to check this test
+        //context(`When transaction mode set to all-or-nothing`) => {
+        //    it(`fails when a document fails to validate`) => {
+        //        expect->errorCode(417) => {}
+        //    }
+        //}
+    }
 }
